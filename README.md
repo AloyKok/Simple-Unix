@@ -1,2 +1,2 @@
-# ICT302_A2
+# ICT374_A2
 Unix Shell Implementation

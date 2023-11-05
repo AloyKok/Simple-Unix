@@ -1,3 +1,10 @@
+/*
+* Shell.c
+* A Simple Unix Shell
+* Authors : Aloysious Kok & Gerald
+* Last Update :
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,11 +12,13 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#define MAX_COMMAND_LINE_ARGS 100
-#define MAX_ARGUMENTS_PER_COMMAND 1000
+#define MAX_COMMANDS 100
+#define MAX_ARGUMENTS 1000
+#define CMD_LENGTH 1024
+#define MAX_BUF_SIZE 256
 
 void execute_command(char *command) {
-    char *args[MAX_COMMAND_LINE_ARGS];
+    char *args[MAX_COMMANDS];
     // Tokenize the command
     char *token = strtok(command, " ");
     int i = 0;
@@ -33,7 +42,7 @@ void execute_command(char *command) {
 }
 
 int main() {
-    char command[MAX_ARGUMENTS_PER_COMMAND * MAX_COMMAND_LINE_ARGS];
+    char command[MAX_ARGUMENTS * MAX_COMMANDS];
 
     while (1) {
         printf("%s", "> ");

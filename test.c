@@ -3,6 +3,10 @@
 #include <string.h>
 #include "parser.h"
 
+// Forward declaration of the dump_structure and print_human_readable functions
+void dump_structure(command *c, int count);
+void print_human_readable(command *c, int count);
+
 // This function will print out the command structure for verification
 void print_command_structure(command *cmd_struct)
 {
@@ -26,7 +30,9 @@ void test_process_cmd() {
     const char *test_commands[] = {
         "ls -l > output.txt",
         "cat < input.txt",
-        // ... (rest of your command strings)
+        "grep 'main' < input.c > output.txt",
+        "gcc -o program program.c",
+        "find . -name '*.c' | xargs grep 'stdio'",
         NULL // Marks the end of the test commands
     };
 
@@ -42,7 +48,10 @@ void test_process_cmd() {
         printf("Testing command: %s\n", command_copy);
         process_cmd(command_copy, cmd_struct); // Process the command
 
-        print_command_structure(cmd_struct); // Function to print the command structure
+        // Use dump_structure or print_human_readable to print the command structure
+        dump_structure(cmd_struct, i);
+        // print_human_readable(cmd_struct, i); // Uncomment to use human-readable output
+
         clean_up(&cmd_struct, 1); // Clean up the command structure
 
         free(command_copy); // Free the allocated command copy
@@ -76,11 +85,12 @@ void test_process_cmd_line() {
             printf("Command input check failed with code: %d\n", check_result);
         } else {
             command **cmd_array = process_cmd_line(command_line_copy, 1); // Process the command line
-
             int j;
             // Print and clean up the command structures
             for (int j = 0; cmd_array && cmd_array[j] != NULL; j++) {
-                print_command_structure(cmd_array[j]);
+                // Use dump_structure or print_human_readable to print the command structure
+                // dump_structure(cmd_array[j], j);
+                print_human_readable(cmd_array[j], j); // Uncomment to use human-readable output
             }
             clean_up(cmd_array, j); // Clean up the command structures
             free(cmd_array); // Free the array itself

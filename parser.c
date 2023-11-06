@@ -6,7 +6,6 @@
  */
 
 #include "parser.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -411,8 +410,7 @@ char lead_separator(const char *cmd)
  *      None.
  *
  */
-void
-dump_structure(command * c, int count)
+void dump_structure(command * c, int count)
 {
    int lc = 0;
 
@@ -444,8 +442,7 @@ dump_structure(command * c, int count)
  *      None.
  *
  */
-void
-print_human_readable(command * c, int count)
+void print_human_readable(command * c, int count)
 {
    int lc = 1;
 

@@ -1,12 +1,12 @@
-#ifndef _PARSER_H
-#define _PARSER_H
-
 /*
  * Parser.h
  * Data structures and various defines for parser.c
- * Author : Aloysious Kok & Gerald
+ * Author : Aloysious & Gerald
  * Last Update : 
  */
+
+#ifndef _PARSER_H
+#define _PARSER_H
 
 #include <glob.h> // for glob_t
 
@@ -30,15 +30,19 @@ typedef struct Command_struct {
     glob_t globbuf;        // For wildcard handling
 } command;
 
-//Helper Functions
-
 
 // Function prototypes
-command **process_cmd_line(char *cmd_line, int new);
-void process_cmd(char *cmd, command *result);
+char *trim_whitespace(char *str);
+char *safe_strdup(const char *str);
+void *safe_realloc(void *ptr, size_t size);
+void free_command(command *cmd);
 void process_simple_cmd(char *cmd, command *result);
+void process_cmd(char *cmd, command *result);
 void clean_up(command **cmd_stack, int cmd_count);
+command **process_cmd_line(char *cmd_line, int new);
 int check_cmd_input(const char *cmd);
 char lead_separator(const char *cmd);
+void dump_structure(command *c, int count);
+void print_human_readable(command *c, int count);
 
 #endif // PARSER_H

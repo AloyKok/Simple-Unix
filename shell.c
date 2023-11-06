@@ -1,77 +1,68 @@
-/*
-* Shell.c
-* A Simple Unix Shell
-* Authors : Aloysious Kok & Gerald
-* Last Update :
-*/
-
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "parser.h"
 
-#define MAX_PROMPT_LENGTH 100
-#define MAX_COMMAND_LENGTH 1024
+#define PROMPT_MAX_LEN 100
 
-char prompt[MAX_PROMPT_LENGTH] = "% "; // Default shell prompt
+// Function prototypes
+void run_shell();
+void execute_command(const char* cmd);
 
-// Function to change the shell prompt
-void change_prompt(char *new_prompt) {
-    if (new_prompt && strlen(new_prompt) < MAX_PROMPT_LENGTH) {
-        strcpy(prompt, new_prompt);
-        strcat(prompt, " "); // Add a space for readability
-    } else {
-        fprintf(stderr, "Prompt is too long. Maximum length is %d characters.\n", MAX_PROMPT_LENGTH);
-    }
-}
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-// Function to display the shell prompt and get the command from the user
-void get_command(char *command) {
-    printf("%s", prompt);
-    if (fgets(command, MAX_COMMAND_LENGTH, stdin) == NULL) {
-        if (feof(stdin)) {
-            // End of file (user pressed Ctrl+D)
-            printf("\n");
-            exit(0);
-        } else {
-            perror("fgets failed");
-            exit(1);
-        }
-    }
-    // Remove newline at the end of the command
-    command[strcspn(command, "\n")] = '\0';
-}
+// Maximum length for a command
+#define MAX_COMMAND_LENGTH 100
 
-// Function to parse and execute the command
-void execute_command(char *command) {
-    // Split the command into tokens
-    char *tokens[MAX_COMMAND_LENGTH / 2 + 1]; // Each token is at least two characters
-    int i = 0;
-    char *token = strtok(command, " ");
-    while (token != NULL) {
-        tokens[i++] = token;
-        token = strtok(NULL, " ");
-    }
-    tokens[i] = NULL; // NULL-terminate the array
-
-    // Check for the 'prompt' built-in command
-    if (tokens[0] && strcmp(tokens[0], "prompt") == 0 && tokens[1]) {
-        change_prompt(tokens[1]);
-    } else {
-        // This is where you would add additional built-in commands or external command execution
-        printf("Executing: %s\n", command);
-        // You would normally use fork(), exec(), and wait() to execute the command here
-    }
-}
+// Function prototypes
+void run_shell();
+void execute_command(const char* cmd);
 
 int main() {
-    char command[MAX_COMMAND_LENGTH];
-
-    while (1) {
-        get_command(command);
-        execute_command(command);
-    }
-
+    // Start the shell
+    run_shell();
     return 0;
 }
+
+void run_shell() {
+    char command[MAX_COMMAND_LENGTH];
+    char prompt[MAX_COMMAND_LENGTH] = "% ";
+
+    while (1) {
+        printf("%s", prompt); // Display the prompt
+        if (fgets(command, MAX_COMMAND_LENGTH, stdin) == NULL) {
+            printf("Error reading command. Exiting shell.\n");
+            break;
+        }
+
+        // Remove newline character from command if present
+        command[strcspn(command, "\n")] = 0;
+
+        // Check if the command is to change the prompt
+        if (strncmp(command, "prompt ", 7) == 0) {
+            // Change the shell prompt to the second token
+            strcpy(prompt, command + 7);
+            size_t len = strlen(prompt);
+            if (len == 0 || prompt[len - 1] != ' ') {
+                // Ensure the prompt ends with a space
+                strcat(prompt, " ");
+            }
+        } else {
+            // Execute the command
+            execute_command(command);
+        }
+    }
+}
+
+void execute_command(const char* cmd) {
+    // Here you would parse the command and execute it.
+    // For now, we'll just print it out.
+    printf("Executing command: %s\n", cmd);
+}
+
+

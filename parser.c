@@ -5,12 +5,12 @@
  * Last Modification :
  */
 
-#include "parser.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
+#include "parser.h"
 
 // #define DEBUG
 
@@ -91,6 +91,11 @@ void free_command(command *cmd)
         free(cmd->redirect_out);  // Free the output redirection string
         cmd->redirect_out = NULL; // Set freed pointer to NULL
 
+        if (cmd->globbuf.gl_pathv)
+        {
+            globfree(&cmd->globbuf); // Free the memory allocated by glob
+        }
+
         free(cmd); // Finally, free the command structure itself
     }
 }
@@ -126,10 +131,35 @@ void process_simple_cmd(char *cmd, command *result)
         int argc = 0;
         do
         {
-            // Expand the argv array and add the argument
-            result->argv = safe_realloc(result->argv, (argc + 2) * sizeof(char *));
-            result->argv[argc] = safe_strdup(token);
-            argc++;
+            // Check for wildcard characters in the token
+            if (strpbrk(token, "*?") != NULL)
+            {
+                // Wildcard detected, prepare for expansion
+                if (glob(token, 0, NULL, &result->globbuf) == 0)
+                {
+                    // Add each expanded filename to the argv array
+                    for (size_t i = 0; i < result->globbuf.gl_pathc; ++i)
+                    {
+                        result->argv = safe_realloc(result->argv, (argc + 2) * sizeof(char *));
+                        result->argv[argc] = safe_strdup(result->globbuf.gl_pathv[i]);
+                        argc++;
+                    }
+                }
+                else
+                {
+                    // If glob() failed, treat the token as a regular argument
+                    result->argv = safe_realloc(result->argv, (argc + 2) * sizeof(char *));
+                    result->argv[argc] = safe_strdup(token);
+                    argc++;
+                }
+            }
+            else
+            {
+                // No wildcard, proceed as normal
+                result->argv = safe_realloc(result->argv, (argc + 2) * sizeof(char *));
+                result->argv[argc] = safe_strdup(token);
+                argc++;
+            }
         } while ((token = strtok(NULL, " \t\n")) != NULL);
 
         // NULL-terminate the argv array
@@ -411,25 +441,27 @@ char lead_separator(const char *cmd)
  *      None.
  *
  */
-void dump_structure(command * c, int count)
+void dump_structure(command *c, int count)
 {
-   int lc = 0;
+    int lc = 0;
 
-   printf("---- Command(%d) ----\n", count);
-   printf("%s\n", c->com_name);
-   if (c->argv != NULL) {
-      while (c->argv[lc] != NULL) {
-         printf("+-> argv[%d] = %s\n", lc, c->argv[lc]);
-         lc++;
-      }
-   }
-   printf("Background = %d\n", c->background);
-   printf("Redirect Input = %s\n", c->redirect_in);
-   printf("Redirect Output = %s\n", c->redirect_out);
-   printf("Pipe to Command = %d\n\n", c->pipe_to);
+    printf("---- Command(%d) ----\n", count);
+    printf("%s\n", c->com_name);
+    if (c->argv != NULL)
+    {
+        while (c->argv[lc] != NULL)
+        {
+            printf("+-> argv[%d] = %s\n", lc, c->argv[lc]);
+            lc++;
+        }
+    }
+    printf("Background = %d\n", c->background);
+    printf("Redirect Input = %s\n", c->redirect_in);
+    printf("Redirect Output = %s\n", c->redirect_out);
+    printf("Pipe to Command = %d\n\n", c->pipe_to);
 
-   return;
-}                       /*End of dump_structure() */
+    return;
+} /*End of dump_structure() */
 
 /*
  * This function dumps the contents of the structure to stdout in a human
@@ -443,28 +475,30 @@ void dump_structure(command * c, int count)
  *      None.
  *
  */
-void print_human_readable(command * c, int count)
+void print_human_readable(command *c, int count)
 {
-   int lc = 1;
+    int lc = 1;
 
-   printf("Program : %s\n", c->com_name);
-   if (c->argv != NULL) {
-      printf("Parameters : ");
-      while (c->argv[lc] != NULL) {
-         printf("%s ", c->argv[lc]);
-         lc++;
-      }
-      printf("\n");
-   }
-   if (c->background == 1)
-      printf("Execution in Background.\n");
-   if (c->redirect_in != NULL)
-      printf("Redirect Input from %s.\n", c->redirect_in);
-   if (c->redirect_out != NULL)
-      printf("Redirect Output to %s.\n", c->redirect_out);
-   if (c->pipe_to != 0)
-      printf("Pipe Output to Command# %d\n", c->pipe_to);
-   printf("\n\n");
+    printf("Program : %s\n", c->com_name);
+    if (c->argv != NULL)
+    {
+        printf("Parameters : ");
+        while (c->argv[lc] != NULL)
+        {
+            printf("%s ", c->argv[lc]);
+            lc++;
+        }
+        printf("\n");
+    }
+    if (c->background == 1)
+        printf("Execution in Background.\n");
+    if (c->redirect_in != NULL)
+        printf("Redirect Input from %s.\n", c->redirect_in);
+    if (c->redirect_out != NULL)
+        printf("Redirect Output to %s.\n", c->redirect_out);
+    if (c->pipe_to != 0)
+        printf("Pipe Output to Command# %d\n", c->pipe_to);
+    printf("\n\n");
 
-   return;
-}                       /*End of print_human_readable() */
+    return;
+} /*End of print_human_readable() */

@@ -11,7 +11,7 @@
 // Default shell prompt (%)
 char shell_prompt[MAX_PROMPT_LEN] = "% ";
 
-const char *shell_cmds[] = {"prompt, pwd"};
+const char *shell_cmds[] = {"prompt", "pwd", "exit"};
 
 // Function Prototypes
 void run_shell();

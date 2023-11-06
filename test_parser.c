@@ -49,7 +49,7 @@ void test_process_cmd() {
         process_cmd(command_copy, cmd_struct); // Process the command
 
         // Use dump_structure or print_human_readable to print the command structure
-        dump_structure(cmd_struct, i);
+        dump_structure(cmd_struct, i); // Uncomment to use command strucuture output
         // print_human_readable(cmd_struct, i); // Uncomment to use human-readable output
 
         clean_up(&cmd_struct, 1); // Clean up the command structure
@@ -88,8 +88,9 @@ void test_process_cmd_line() {
             int j;
             // Print and clean up the command structures
             for (int j = 0; cmd_array && cmd_array[j] != NULL; j++) {
+
                 // Use dump_structure or print_human_readable to print the command structure
-                // dump_structure(cmd_array[j], j);
+                // dump_structure(cmd_array[j], j); // Uncomment to use command strucuture output
                 print_human_readable(cmd_array[j], j); // Uncomment to use human-readable output
             }
             clean_up(cmd_array, j); // Clean up the command structures

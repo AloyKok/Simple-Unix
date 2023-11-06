@@ -1,68 +1,58 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include "parser.h"
+#include "parser.h" 
 
-#define PROMPT_MAX_LEN 100
+#define MAX_PROMPT_LEN 100
+char shell_prompt[MAX_PROMPT_LEN] = "% ";
 
-// Function prototypes
+// Function Prototypes
 void run_shell();
-void execute_command(const char* cmd);
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-// Maximum length for a command
-#define MAX_COMMAND_LENGTH 100
-
-// Function prototypes
-void run_shell();
-void execute_command(const char* cmd);
+command** process_cmd_line(char *cmd_line, int new);
 
 int main() {
-    // Start the shell
-    run_shell();
+    run_shell(); // Start the shell
     return 0;
 }
 
 void run_shell() {
-    char command[MAX_COMMAND_LENGTH];
-    char prompt[MAX_COMMAND_LENGTH] = "% ";
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t nread;
+    command **cmd_line;
 
-    while (1) {
-        printf("%s", prompt); // Display the prompt
-        if (fgets(command, MAX_COMMAND_LENGTH, stdin) == NULL) {
-            printf("Error reading command. Exiting shell.\n");
-            break;
+    printf("%s", shell_prompt); // Display the default prompt
+
+    while ((nread = getline(&line, &len, stdin)) != -1) {
+        // Remove newline character from line if present
+        if(line[nread - 1] == '\n') {
+            line[nread - 1] = '\0';
         }
 
-        // Remove newline character from command if present
-        command[strcspn(command, "\n")] = 0;
+        // Process the command line
+        cmd_line = process_cmd_line(line, 1);
 
-        // Check if the command is to change the prompt
-        if (strncmp(command, "prompt ", 7) == 0) {
-            // Change the shell prompt to the second token
-            strcpy(prompt, command + 7);
-            size_t len = strlen(prompt);
-            if (len == 0 || prompt[len - 1] != ' ') {
-                // Ensure the prompt ends with a space
-                strcat(prompt, " ");
+        int i;
+        // Execute the command line
+        // This is where you would add the execution logic using the parsed command line
+        // For now, it will just print the parsed structure for demonstration purposes
+        if (cmd_line) {
+            int i = 0;
+            while (cmd_line[i] != NULL) {
+                dump_structure(cmd_line[i], i); // This is a function from your parser.c that prints the command structure
+                i++;
             }
-        } else {
-            // Execute the command
-            execute_command(command);
         }
+
+        // Free the memory allocated by getline() and the command structures
+        if (line) {
+            free(line);
+            line = NULL;
+        }
+        clean_up(cmd_line, i); // Assuming clean_up() frees the entire command line structure array
+
+        printf("%s", shell_prompt); // Display the default prompt
     }
+
+    free(line); // Free the memory allocated by getline()
 }
-
-void execute_command(const char* cmd) {
-    // Here you would parse the command and execute it.
-    // For now, we'll just print it out.
-    printf("Executing command: %s\n", cmd);
-}
-
-

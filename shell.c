@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <limits.h>
+
 #include "parser.h"
 
 #define MAX_PROMPT_LEN 100
@@ -14,6 +17,8 @@ const char *shell_cmds[] = {"prompt, pwd"};
 void run_shell();
 command **process_cmd_line(char *cmd_line, int new);
 void builtin_prompt(command *cmd);
+void builtin_pwd();
+int builtin_exit();
 
 int main()
 {
@@ -55,13 +60,22 @@ void run_shell()
         }
 
         // Execute the command line
-        if (cmd_line) {
-            for (int i = 0; cmd_line[i] != NULL; i++) {
+        if (cmd_line)
+        {
+            for (int i = 0; cmd_line[i] != NULL; i++)
+            {
                 // Check if the command is 'prompt'
-                if (strcmp(cmd_line[i]->com_name, "prompt") == 0) {
+                if (strcmp(cmd_line[i]->com_name, "pwd") == 0)
+                {
+                    builtin_pwd(); // Call the function to print the working directory
+                }
+                else if (strcmp(cmd_line[i]->com_name, "prompt") == 0)
+                {
                     builtin_prompt(cmd_line[i]); // Change the prompt
-                } else {
-                    // Handle other commands...
+                }
+                else if (strcmp(cmd_line[i]->com_name, "exit") == 0)
+                {
+                    builtin_exit();
                 }
                 // If this is not the last command, you might want to skip execution
                 // as the prompt command doesn't need to be 'run' like others
@@ -96,4 +110,24 @@ void builtin_prompt(command *cmd)
     {
         printf("prompt: expects an argument\n");
     }
+}
+
+// Function to implement the 'pwd' command
+void builtin_pwd()
+{
+    char cwd[PATH_MAX]; // PATH_MAX is defined in limits.h and is the maximum length for a path
+    if (getcwd(cwd, sizeof(cwd)) != NULL)
+    {
+        printf("%s\n", cwd); // Print the current working directory
+    }
+    else
+    {
+        perror("pwd"); // Print the error message if getcwd fails
+    }
+}
+
+int builtin_exit()
+{
+    printf("\nExiting Simple Unix Shell..\n");
+    exit(EXIT_SUCCESS);
 }

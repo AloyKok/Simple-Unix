@@ -461,7 +461,7 @@ void dump_structure(command *c, int count)
     printf("Pipe to Command = %d\n\n", c->pipe_to);
 
     return;
-} /*End of dump_structure() */
+}
 
 /*
  * This function dumps the contents of the structure to stdout in a human
@@ -501,4 +501,4 @@ void print_human_readable(command *c, int count)
     printf("\n\n");
 
     return;
-} /*End of print_human_readable() */
+}

@@ -3,6 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "parser.h"
 
@@ -11,14 +15,16 @@
 // Default shell prompt (%)
 char shell_prompt[MAX_PROMPT_LEN] = "% ";
 
-const char *shell_cmds[] = {"prompt", "pwd", "exit"};
+const char *shell_cmds[] = {"prompt", "cd", "help" "pwd", "exit"};
 
 // Function Prototypes
 void run_shell();
 command **process_cmd_line(char *cmd_line, int new);
 void builtin_prompt(command *cmd);
+void builtin_cd(command *cmd);
 void builtin_pwd();
 int builtin_exit();
+int exec_pipe(command **cmd_stack, int current) ;
 
 int main()
 {
@@ -73,6 +79,10 @@ void run_shell()
                 {
                     builtin_prompt(cmd_line[i]); // Change the prompt
                 }
+                else if (strcmp(cmd_line[i]->com_name, "cd") == 0)
+                {
+                    builtin_cd(cmd_line[i]); // Change the directory
+                }
                 else if (strcmp(cmd_line[i]->com_name, "exit") == 0)
                 {
                     builtin_exit();
@@ -126,8 +136,143 @@ void builtin_pwd()
     }
 }
 
+// Function to implement the 'cd' command
+void builtin_cd(command *cmd) {
+    const char *path = cmd->argv[1]; // Get the second argument as the path
+    char cwd[PATH_MAX]; // Buffer to store the current working directory
+
+    if (path == NULL) {
+        path = getenv("HOME"); // If no path is provided, use the HOME environment variable
+    }
+
+    // Try to change directory
+    if (chdir(path) != 0) {
+        perror("cd"); // Print an error message if chdir fails
+    } 
+    else {
+        // If chdir is successful, get the new current working directory
+        if (getcwd(cwd, sizeof(cwd)) != NULL) {
+            printf("%s\n", cwd); // Print the current working directory
+        }
+    }
+}
+
 int builtin_exit()
 {
     printf("\nExiting Simple Unix Shell..\n");
     exit(EXIT_SUCCESS);
+}
+
+int exec_pipe(command **cmd_stack, int current) {
+    int idx = current;
+    int p_count = 0;
+    int pipefd[2 * 1000]; // Support up to 1000 commands, hence 2 fds per command (input/output)
+    pid_t pid;
+    int stdin_backup = dup(0); // Backup for stdin
+    int stdout_backup = dup(1); // Backup for stdout
+
+    if (stdin_backup == -1 || stdout_backup == -1) {
+        perror("dup");
+        return -1; // Handle dup error
+    }
+
+    // Create all needed pipes first
+    while (cmd_stack[idx] != NULL && cmd_stack[idx]->pipe_to > 0) {
+        if (pipe(pipefd + p_count * 2) == -1) {
+            perror("pipe");
+            return -1; // Handle pipe error
+        }
+        p_count++;
+        idx++;
+    }
+
+    idx = current;
+
+    // Execute each command in the pipeline
+    for (int i = 0; i <= p_count; i++) {
+        int inputfile = -1;
+        int outputfile = -1;
+
+        // Handle input redirection for the first command
+        if (i == 0 && cmd_stack[idx]->redirect_in != NULL) {
+            inputfile = open(cmd_stack[idx]->redirect_in, O_RDONLY);
+            if (inputfile == -1) {
+                perror("open");
+                return -1; // Handle open error
+            }
+        }
+
+        // Handle output redirection for the last command
+        if (i == p_count && cmd_stack[idx]->redirect_out != NULL) {
+            outputfile = open(cmd_stack[idx]->redirect_out, O_WRONLY | O_CREAT | O_TRUNC, 0755);
+            if (outputfile == -1) {
+                perror("open");
+                return -1; // Handle open error
+            }
+        }
+
+        pid = fork();
+        if (pid == 0) { // Child process
+            // If not the first command, get input from the previous pipe
+            if (i > 0) {
+                if (dup2(pipefd[(i - 1) * 2], STDIN_FILENO) == -1) {
+                    perror("dup2"); // Handle dup2 error
+                    exit(EXIT_FAILURE);
+                }
+            } else if (inputfile != -1) {
+                if (dup2(inputfile, STDIN_FILENO) == -1) {
+                    perror("dup2"); // Handle dup2 error
+                    exit(EXIT_FAILURE);
+                }
+                close(inputfile);
+            }
+
+            // If not the last command, output to the next pipe
+            if (i < p_count) {
+                if (dup2(pipefd[i * 2 + 1], STDOUT_FILENO) == -1) {
+                    perror("dup2"); // Handle dup2 error
+                    exit(EXIT_FAILURE);
+                }
+            } else if (outputfile != -1) {
+                if (dup2(outputfile, STDOUT_FILENO) == -1) {
+                    perror("dup2"); // Handle dup2 error
+                    exit(EXIT_FAILURE);
+                }
+                close(outputfile);
+            }
+
+            // Close all pipes in the child process
+            for (int j = 0; j < 2 * p_count; j++) {
+                close(pipefd[j]);
+            }
+
+            // Execute the command
+            execvp(cmd_stack[idx]->argv[0], cmd_stack[idx]->argv);
+            perror("execvp"); // If execvp returns, it's an error
+            exit(EXIT_FAILURE);
+        } else if (pid < 0) {
+            perror("fork"); // Handle fork error
+            return -1;
+        }
+
+        idx++;
+    }
+
+    // Close all pipes in the parent process
+    for (int i = 0; i < 2 * p_count; i++) {
+        close(pipefd[i]);
+    }
+
+    // Wait for all processes in the pipeline to finish
+    for (int i = 0; i <= p_count; i++) {
+        wait(NULL);
+    }
+
+    // Restore original stdin and stdout
+    dup2(stdin_backup, 0);
+    dup2(stdout_backup, 1);
+    close(stdin_backup);
+    close(stdout_backup);
+
+    return 0;
 }

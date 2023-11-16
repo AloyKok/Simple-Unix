@@ -1,11 +1,19 @@
+CC=gcc
+CFLAGS=-c
+RM=rm -f
+
+.PHONY: all clean
+
+all: shell
+
 shell: shell.o parser.o
-	gcc shell.o parser.o -o shell
+	$(CC) shell.o parser.o -o shell
 
 shell.o: shell.c shell.h parser.h
-	gcc -c shell.c
+	$(CC) $(CFLAGS) shell.c
 
 parser.o: parser.c parser.h
-	gcc -c parser.c
+	$(CC) $(CFLAGS) parser.c
 
 clean: 
-	 rm *.o
+	$(RM) *.o shell

@@ -32,60 +32,69 @@ void process_simple_cmd(char *cmd, command *result)
       return;
    }
 
-   // Initialize command structure members
    *result = (command){0}; // Zero out the entire structure first
 
-   char *token;
    int arg_count = 0;
    size_t arg_size = 0;
 
-   token = strtok(cmd, white_space);
-   if (token == NULL) // Handle empty command case
-   {
-      result->argv = calloc(1, sizeof(char *)); // Allocate space for a NULL pointer
-      if (!result->argv)
-      {
-         fprintf(stderr, "Memory allocation failed in process_simple_cmd\n");
+   while (*cmd != '\0') {
+      while (isspace((unsigned char)*cmd)) cmd++;
+
+      if (*cmd == '\0') break;
+
+      char *end;
+      int is_quoted = 0;
+      if (*cmd == '"' || *cmd == '\'') {
+         char quote = *cmd++;
+         end = strchr(cmd, quote);
+         if (!end) {
+            fprintf(stderr, "Unmatched quote\n");
+            clean_up_single(result);
+            return;
+         }
+         is_quoted = 1;
+      } else {
+         end = cmd;
+         while (*end && !isspace((unsigned char)*end)) end++;
+      }
+
+      char *token = strndup(cmd, end - cmd);
+      if (!token) {
+         fprintf(stderr, "Memory allocation failed for token\n");
+         clean_up_single(result);
          return;
       }
-      result->argv[0] = NULL; // Set the first element to NULL for an empty command
-      return;
-   }
 
-   while (token != NULL)
-   {
       char **temp_argv = realloc(result->argv, (arg_size + 2) * sizeof(char *));
-
-      // When memory allocation fails, call clean_up_single instead of clean_up
-      if (!temp_argv)
-      {
+      if (!temp_argv) {
          fprintf(stderr, "Memory allocation failed in process_simple_cmd\n");
-         clean_up_single(result); // Use the new clean_up_single function
+         clean_up_single(result);
+         free(token);
          return;
       }
 
       result->argv = temp_argv;
-      result->argv[arg_count] = strdup(token);
-      if (!result->argv[arg_count])
-      {
-         fprintf(stderr, "Memory allocation failed for argument in process_simple_cmd\n");
-         clean_up_single(result); // Use the new clean_up_single function
-         return;
-      }
-
-      if (arg_count == 0)
-      {
-         result->com_name = result->argv[0];
-      }
-
+      result->argv[arg_count] = token;
       arg_count++;
       arg_size++;
-      token = strtok(NULL, white_space);
+
+      if (is_quoted) end++;
+      cmd = (*end) ? end + 1 : end;
    }
 
-   // Ensure the last element of argv is NULL
-   result->argv[arg_count] = NULL;
+   result->argv[arg_count] = NULL; // Ensure the last element of argv is NULL
+   if (arg_count == 0) {
+      result->argv = calloc(1, sizeof(char *));
+      if (!result->argv) {
+         fprintf(stderr, "Memory allocation failed in process_simple_cmd\n");
+         return;
+      }
+      result->argv[0] = NULL; // Set the first element to NULL for an empty command
+   } else {
+      result->com_name = result->argv[0];
+   }
 }
+
 
 /*
  * This function parses the commands isolated from the command line string in

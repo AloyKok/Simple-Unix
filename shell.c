@@ -569,17 +569,23 @@ int builtin_menu(command *cmd)
 {
     int builtin_idx = 0;
 
-    // check if cmd->argv[0] is not NULL
-    if (cmd != NULL && cmd->argv != NULL && cmd->argv[0] != NULL)
-    {
-        // check for builtin commands
-        for (int i = 0; i < (sizeof(builtin_cmds) / sizeof(char *)); i++)
-        {
-            if (strcmp(cmd->argv[0], builtin_cmds[i]) == 0)
-            {
-                builtin_idx = i + 1;
-                break;
-            }
+    // Check if cmd is not NULL
+    if (cmd == NULL) {
+        fprintf(stderr, "Error: Command structure is NULL.\n");
+        return -1;
+    }
+
+    // Check if cmd->argv is not NULL and cmd->argv[0] is not NULL
+    if (cmd->argv == NULL || cmd->argv[0] == NULL) {
+        fprintf(stderr, "Error: Command arguments are NULL.\n");
+        return -1;
+    }
+
+    // Check for built-in commands
+    for (int i = 0; i < (sizeof(builtin_cmds) / sizeof(char *)); i++) {
+        if (strcmp(cmd->argv[0], builtin_cmds[i]) == 0) {
+            builtin_idx = i + 1;
+            break;
         }
     }
 
@@ -609,6 +615,7 @@ int builtin_menu(command *cmd)
     default:
         break;
     }
+
     return builtin_idx;
 }
 
@@ -673,7 +680,6 @@ int builtin_cd(command *cmd)
     printf("current directory: %s\n", cwd);
     return 0;
 }
-
 
 int builtin_prompt(command *cmd)
 {
